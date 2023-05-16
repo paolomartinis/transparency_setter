@@ -12,7 +12,7 @@ email=martinis@idrostudi.it
 
 about=Apply the specified transparency value to both vector and raster layers, as well as layers within the selected groups in the Layer Panel
 
-tracker=http://www.idrostudi.it
+tracker=https://github.com/paolomartinis/transparency_setter/issues
 repository=https://github.com/paolomartinis/transparency_setter
 # End of mandatory metadata
 
@@ -25,7 +25,7 @@ hasProcessingProvider=no
 # Tags are comma separated with spaces allowed
 tags=python
 
-homepage=http://www.idrostudi.it
+homepage=https://github.com/paolomartinis/transparency_setter
 category=Plugins
 icon=icon.png
 # experimental flag
