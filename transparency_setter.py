@@ -21,51 +21,31 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.core import QgsVectorLayer, QgsRasterLayer
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-from PyQt5.QtWidgets import QWidgetAction, QSlider, QLabel, QSpinBox, QStyleOptionSlider, QStyle
+from PyQt5.QtWidgets import QWidgetAction, QSlider, QLabel, QSpinBox, QStyleOptionSlider, QStyle, QCheckBox
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator, QColor
 from PyQt5.QtCore import Qt, QPoint
-
+import os.path
 
 # Initialize Qt resources from file resources.py
 from .resources import *
-# Import the code for the dialog
-from .transparency_setter_dialog import TransparencySetterDialog
-import os.path
-
-
-class SteppedSlider(QSlider):
-    def __init__(self, orientation, parent=None):
-        super(SteppedSlider, self).__init__(orientation, parent)
-
-    def mouseMoveEvent(self, e):
-        opt = QStyleOptionSlider()
-        self.initStyleOption(opt)
-        sr = self.style().subControlRect(QStyle.CC_Slider, opt, QStyle.SC_SliderHandle, self)
-
-        if e.buttons() & Qt.LeftButton:
-            if sr.contains(e.pos()) == False:
-                new_value = self.style().sliderValueFromPosition(self.minimum(), self.maximum(), e.x(), sr.width())
-                stepped_value = round(new_value / 10) * 10
-                self.setValue(stepped_value)
-                e.accept()
-        super(SteppedSlider, self).mouseMoveEvent(e)
-
 
 
 class TransparencySetter:
-    """QGIS Plugin Implementation."""
+    """
+    QGIS Plugin Implementation for setting transparency to layers and groups.
+    """
 
     def __init__(self, iface):
-        """Constructor.
+        """
+        Constructor.
 
-        :param iface: An interface instance that will be passed to this class
-            which provides the hook by which you can manipulate the QGIS
-            application at run time.
+        :param iface: An interface instance that provides the hook to manipulate the QGIS application.
         :type iface: QgsInterface
         """
         # Save reference to the QGIS interface
@@ -92,11 +72,9 @@ class TransparencySetter:
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
 
-    # noinspection PyMethodMayBeStatic
     def tr(self, message):
-        """Get the translation for a string using Qt translation API.
-
-        We implement this ourselves since we do not inherit QObject.
+        """
+        Get the translation for a string using Qt translation API.
 
         :param message: String for translation.
         :type message: str, QString
@@ -104,9 +82,7 @@ class TransparencySetter:
         :returns: Translated version of message.
         :rtype: QString
         """
-        # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('TransparencySetter', message)
-
 
     def add_action(
         self,
@@ -118,11 +94,12 @@ class TransparencySetter:
         add_to_toolbar=True,
         status_tip=None,
         whats_this=None,
-        parent=None):
-        """Add a toolbar icon to the toolbar.
+        parent=None
+    ):
+        """
+        Add a toolbar icon to the toolbar.
 
-        :param icon_path: Path to the icon for this action. Can be a resource
-            path (e.g. ':/plugins/foo/bar.png') or a normal file system path.
+        :param icon_path: Path to the icon for this action. Can be a resource path or a file system path.
         :type icon_path: str
 
         :param text: Text that should be shown in menu items for this action.
@@ -131,30 +108,24 @@ class TransparencySetter:
         :param callback: Function to be called when the action is triggered.
         :type callback: function
 
-        :param enabled_flag: A flag indicating if the action should be enabled
-            by default. Defaults to True.
+        :param enabled_flag: A flag indicating if the action should be enabled by default. Defaults to True.
         :type enabled_flag: bool
 
-        :param add_to_menu: Flag indicating whether the action should also
-            be added to the menu. Defaults to True.
+        :param add_to_menu: Flag indicating whether the action should also be added to the menu. Defaults to True.
         :type add_to_menu: bool
 
-        :param add_to_toolbar: Flag indicating whether the action should also
-            be added to the toolbar. Defaults to True.
+        :param add_to_toolbar: Flag indicating whether the action should also be added to the toolbar. Defaults to True.
         :type add_to_toolbar: bool
 
-        :param status_tip: Optional text to show in a popup when mouse pointer
-            hovers over the action.
+        :param status_tip: Optional text to show in a popup when mouse pointer hovers over the action.
         :type status_tip: str
 
         :param parent: Parent widget for the new action. Defaults None.
         :type parent: QWidget
 
-        :param whats_this: Optional text to show in the status bar when the
-            mouse pointer hovers over the action.
+        :param whats_this: Optional text to show in the status bar when the mouse pointer hovers over the action.
 
-        :returns: The action that was created. Note that the action is also
-            added to self.actions list.
+        :returns: The action that was created. Note that the action is also added to self.actions list.
         :rtype: QAction
         """
 
@@ -174,16 +145,16 @@ class TransparencySetter:
             self.iface.addToolBarIcon(action)
 
         if add_to_menu:
-            self.iface.addPluginToMenu(
-                self.menu,
-                action)
+            self.iface.addPluginToMenu(self.menu, action)
 
         self.actions.append(action)
 
         return action
 
     def initGui(self):
-        """Create the menu entries and toolbar icons inside the QGIS GUI."""
+        """
+        Create the menu entries and toolbar icons inside the QGIS GUI.
+        """
 
         # will be set False in run()
         self.first_start = True
@@ -199,6 +170,12 @@ class TransparencySetter:
         self.slider.setTracking(True)
         self.slider.valueChanged.connect(self.slider_changed)
 
+        # Create a checkbox widget to disable functionality
+        self.disable_checkbox = QCheckBox()
+        self.disable_checkbox.setToolTip("Disable plugin")
+        self.disable_checkbox.setChecked(False)  # Initial state
+        self.disable_checkbox.stateChanged.connect(self.checkbox_state_changed)
+
         # Create a label widget
         self.label = QLabel("Transparency:")
 
@@ -212,41 +189,83 @@ class TransparencySetter:
         # Add widgets to the toolbar
         self.toolbar = self.iface.addToolBar("Layer Transparency Toolbar")
         self.toolbar.setObjectName("Layer Transparency Toolbar")
-        
+
+        self.toolbar.addWidget(self.disable_checkbox)
         self.toolbar.addWidget(self.label)
         self.toolbar.addWidget(self.transparency_input)
         self.toolbar.addWidget(self.slider)
 
         self.iface.layerTreeView().selectionModel().selectionChanged.connect(self.update_slider_from_selected_layer)
 
-
     def unload(self):
-        """Removes the plugin menu item and icon from QGIS GUI."""
+        """
+        Removes the plugin menu item and icon from QGIS GUI.
+        """
         for action in self.actions:
-            self.iface.removePluginMenu(
-                self.tr(u'&Transparency Setter'),
-                action)
+            self.iface.removePluginMenu(self.tr(u'&Transparency Setter'), action)
             self.iface.removeToolBarIcon(action)
 
+    def checkbox_state_changed(self, state):
+        """
+        Handle checkbox state changes.
+
+        :param state: The new checkbox state.
+        :type state: int
+        """
+        disabled = state == Qt.Checked
+        # Make other widgets gray and unreachable when checkbox is checked
+        self.slider.setEnabled(not disabled)
+        self.label.setEnabled(not disabled)
+        self.transparency_input.setEnabled(not disabled)
 
     def apply_transparency(self, transparency):
+        """
+        Apply the specified transparency value to selected layers or groups.
+
+        :param transparency: The transparency value to apply.
+        :type transparency: int
+        """
+        if self.disable_checkbox.isChecked():
+            return
+
         layer_tree_view = self.iface.layerTreeView()
         selected_nodes = layer_tree_view.selectedNodes()
-
-        def apply_transparency_to_group(group_node, transparency):
-            for layer_node in group_node.children():
-                self.apply_transparency_to_layer(layer_node.layer(), transparency)
 
         if selected_nodes:
             for selected_node in selected_nodes:
                 if selected_node.nodeType() == 0:
-                    apply_transparency_to_group(selected_node, transparency)
+                    self.apply_transparency_to_group(selected_node, transparency)
                 elif selected_node.nodeType() == 1:
                     self.apply_transparency_to_layer(selected_node.layer(), transparency)
         else:
             print("Please select one or more groups and/or layers in the Layer Panel.")
 
+    def apply_transparency_to_group(self, group_node, transparency):
+        """
+        Apply the specified transparency value to layers within the given group.
+
+        :param group_node: The group node to apply transparency to.
+        :type group_node: QgsLayerTreeNode
+
+        :param transparency: The transparency value to apply.
+        :type transparency: int
+        """
+        for child_node in group_node.children():
+            if child_node.nodeType() == 0:  # Group node
+                self.apply_transparency_to_group(child_node, transparency)
+            elif child_node.nodeType() == 1:  # Layer node
+                self.apply_transparency_to_layer(child_node.layer(), transparency)
+
     def apply_transparency_to_layer(self, layer, transparency):
+        """
+        Apply the specified transparency value to the given layer.
+
+        :param layer: The layer to apply transparency to.
+        :type layer: QgsMapLayer
+
+        :param transparency: The transparency value to apply.
+        :type transparency: int
+        """
         opacity = (100 - transparency) / 100.0
         if isinstance(layer, QgsVectorLayer):
             layer.setOpacity(opacity)
@@ -254,60 +273,161 @@ class TransparencySetter:
             layer.renderer().setOpacity(opacity)
         layer.triggerRepaint()
 
-
     def update_slider_from_selected_layer(self):
+        """
+        Update the slider value based on the currently selected layer or group in the layer panel.
+        """
+        if self.disable_checkbox.isChecked():
+            return
+
         layer_tree_view = self.iface.layerTreeView()
         selected_nodes = layer_tree_view.selectedNodes()
 
-        if selected_nodes:
-            selected_node = selected_nodes[0]
+        selected_layer_node = None
+        selected_group_node = None
 
-            if selected_node.nodeType() == 0:  # Check if the selected node is a group
-                group_node = selected_node
-                layer_nodes = group_node.children()
-                transparency_values = []
-                if layer_nodes != []:
-                    for layer_node in layer_nodes:
-                        layer = layer_node.layer()
-                        if isinstance(layer, QgsRasterLayer):
-                            transparency = (1.0 - layer.renderer().opacity()) * 100.0
-                        elif isinstance(layer, QgsVectorLayer):
-                            transparency = (1.0 - layer.opacity()) * 100.0
-                        transparency_values.append(transparency)
-                    if len(set(transparency_values)) == 1:  # All layers have the same transparency
-                        transparency = transparency_values[0]
-                        self.transparency_input.setStyleSheet("color: black;")
-                    else:  # Layers have different transparency settings
-                        transparency = transparency_values[0]
-                        self.transparency_input.setStyleSheet("color: red;")
-                else:
-                    layer = []
+        for selected_node in selected_nodes:
+            if selected_node.nodeType() == 1:  # Layer node
+                selected_layer_node = selected_node
+            elif selected_node.nodeType() == 0:  # Group node
+                selected_group_node = selected_node
 
-            elif selected_node.nodeType() == 1:  # Check if the selected node is a layer
-                layer = selected_node.layer()
+        if selected_layer_node:
+            self.update_slider_from_layer_node(selected_layer_node)
+        elif selected_group_node:
+            self.update_slider_from_group_node(selected_group_node)
+
+    def update_slider_from_layer_node(self, layer_node):
+        """
+        Update the slider value based on the transparency of the selected layer.
+
+        :param layer_node: The layer node to update the slider for.
+        :type layer_node: QgsLayerTreeNode
+        """
+        if self.disable_checkbox.isChecked():
+            return
+
+        layer = layer_node.layer()
+        if isinstance(layer, QgsRasterLayer):
+            transparency = (1 - layer.renderer().opacity()) * 100
+        elif isinstance(layer, QgsVectorLayer):
+            transparency = (1 - layer.opacity()) * 100
+        rounded_transparency = round(transparency)
+        self.transparency_input.setStyleSheet("color: black;")
+        self.slider.setValue(int(rounded_transparency))
+        self.transparency_input.setValue(int(rounded_transparency))
+
+    def update_slider_from_group_node(self, group_node):
+        """
+        Update the slider value based on the transparency of the selected group.
+
+        :param group_node: The group node to update the slider for.
+        :type group_node: QgsLayerTreeNode
+        """
+        if self.disable_checkbox.isChecked():
+            return
+
+        transparency_values = []
+        self.get_transparency_values_from_group(group_node, transparency_values)
+
+        if len(set(transparency_values)) == 1:  # All layers have the same transparency
+            transparency = transparency_values[0]
+            self.transparency_input.setStyleSheet("color: black;")
+        else:  # Layers have different transparency settings
+            transparency = self.slider.value()  # Keep the current slider value
+            self.transparency_input.setStyleSheet("color: red;")
+
+        self.slider.setValue(int(transparency))
+        self.transparency_input.setValue(int(transparency))
+
+    def get_transparency_values_from_group(self, group_node, transparency_values):
+        """
+        Get the transparency values of all layers within the given group.
+
+        :param group_node: The group node to get transparency values from.
+        :type group_node: QgsLayerTreeNode
+
+        :param transparency_values: List to store the transparency values.
+        :type transparency_values: list[float]
+        """
+        layer_nodes = group_node.children()
+        for layer_node in layer_nodes:
+            if layer_node.nodeType() == 0:  # Child node is a group
+                self.get_transparency_values_from_group(layer_node, transparency_values)
+            else:  # Child node is a layer
+                layer = layer_node.layer()
                 if isinstance(layer, QgsRasterLayer):
-                    transparency = (1 - layer.renderer().opacity()) * 100.0
+                    transparency = (1.0 - layer.renderer().opacity()) * 100.0
                 elif isinstance(layer, QgsVectorLayer):
-                    transparency = (1 - layer.opacity()) * 100.0
-                self.transparency_input.setStyleSheet("color: black;")
-
-            if layer:
-                self.slider.setValue(transparency)
-                self.transparency_input.setValue(int(transparency))
-
+                    transparency = (1.0 - layer.opacity()) * 100.0
+                transparency_values.append(transparency)
 
     def slider_changed(self, value):
-        """Handle slider value changes and update the transparency."""
-        #self.label.setText(f"Transparency: {value}%")
+        """
+        Handle slider value changes and update the transparency.
+
+        :param value: The new slider value.
+        :type value: int
+        """
+        if self.disable_checkbox.isChecked():
+            return
+
         self.label.setText(f"Transparency:")
         self.transparency_input.setValue(int(value))
         self.apply_transparency(value)
 
     def spin_box_changed(self, value):
-        self.slider.setValue(value)
+        """
+        Handle spin box value changes and update the transparency.
+
+        :param value: The new spin box value.
+        :type value: int
+        """
+        if self.disable_checkbox.isChecked():
+            return
+
+        self.slider.setValue(int(value))
         self.apply_transparency(value)
 
-
     def run(self):
-        """This method is no longer needed as the slider directly handles the transparency."""
+        """
+        This method is no longer needed as the slider directly handles the transparency.
+        """
         pass
+
+
+class SteppedSlider(QSlider):
+    """
+    Custom QSlider class that supports stepping slider values.
+    """
+
+    def __init__(self, orientation, parent=None):
+        """
+        Constructor.
+
+        :param orientation: The orientation of the slider.
+        :type orientation: Qt.Orientation
+
+        :param parent: Parent widget for the slider. Defaults to None.
+        :type parent: QWidget
+        """
+        super(SteppedSlider, self).__init__(orientation, parent)
+
+    def mouseMoveEvent(self, e):
+        """
+        Override the mouse move event to snap the slider value to the nearest step.
+
+        :param e: The mouse event.
+        :type e: QMouseEvent
+        """
+        opt = QStyleOptionSlider()
+        self.initStyleOption(opt)
+        sr = self.style().subControlRect(QStyle.CC_Slider, opt, QStyle.SC_SliderHandle, self)
+
+        if e.buttons() & Qt.LeftButton:
+            if sr.contains(e.pos()) == False:
+                new_value = self.style().sliderValueFromPosition(self.minimum(), self.maximum(), e.x(), sr.width())
+                stepped_value = round(new_value / 10) * 10
+                self.setValue(int(stepped_value))
+                e.accept()
+        super(SteppedSlider, self).mouseMoveEvent(e)

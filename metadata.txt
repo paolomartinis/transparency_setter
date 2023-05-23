@@ -6,7 +6,7 @@
 name=Transparency Setter
 qgisMinimumVersion=3.0
 description=Apply the specified transparency value to both vector and raster layers, as well as layers within the selected groups in the Layer Panel
-version=0.1
+version=0.2
 author=Idrostudi Srl
 email=martinis@idrostudi.it
 
