@@ -1,9 +1,10 @@
 The Transparency Setter plugin allows you to apply transparency to both vector and raster layers, as well as layers within selected groups in the Layer Panel in QGIS.
+
 Here's a summary of its behavior:
 
 Initialization:
 The plugin adds a toolbar to the QGIS interface called "Layer Transparency Toolbar".
-The toolbar contains a label ("Transparency:"), a slider, and a spin box.
+The toolbar contains a checkbox to disable plugin functionality, the label "Transparency:", a spin box and a slider.
 The initial transparency value is set to 0, and the slider and spin box range from 0 to 100 with a step size of 10.
 
 Applying Transparency:
@@ -18,13 +19,13 @@ If you select a combination of layers and groups, the transparency is applied to
 Group Selection:
 If you select a group in the Layer Panel, the transparency is updated based on the transparency values of the layers within that group.
 If all layers within the group have the same transparency value, the slider and spin box will display that value.
-If the layers within the group have different transparency values, the slider and spin box will display the transparency value of the first selected layer, and the spin box text will be highlighted in red to indicate inconsistency.
+If the layers within the group have different transparency values, the slider and spin box will display the transparency value of the last selected item, and the spin box text will be highlighted in red to indicate inconsistency.
 
 Usage Examples:
 Example 1: Selecting a single layer and setting transparency to 50. The transparency of that layer will be set to 50.
 Example 2: Selecting multiple layers and setting transparency to 30. The transparency of each selected layer will be set to 30.
 Example 3: Selecting a group and setting transparency to 30. The transparency of all the layers in the group (also the ones in subgroups) will be set to 30.
-Example 4: Selecting a group with layers having different transparency values. The slider and spin box will display the transparency value of the first selected layer, and the spin box text will be highlighted in red.
+Example 4: Selecting a group with layers having different transparency values. The slider and spin box will display the transparency value of the last selected item, and the spin box text will be highlighted in red.
 Example 5: Selecting a group with layers having the same transparency value. The slider and spin box will display that transparency value.
 Remember that the plugin only applies transparency to the layers/groups that are currently selected in the Layer Panel.
 
